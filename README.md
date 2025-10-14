@@ -149,71 +149,34 @@ npm i -D @builder.io/partytown
 
 ---
 
-## Upcoming reviews backlog:
-
-* @astrojs/image and image pipelines
-
-* View Transitions API patterns for Astro
-
-* i18n options for Astro sites
-
-* Adapters: Cloudflare, Vercel, Netlify
-
-* SEO helpers: sitemap, robots, structured data
-
-* Content Collections patterns and CMS bridges (Sanity, Contentful, Storyblok)
-
-* Rich code rendering: Shiki, Code Hike
+## Next picks backlog
 
 * Data fetching best practices with islands (e.g., TanStack Query)
-
-* Testing and QA: Vitest, Playwright setup for Astro
-
 * Security headers and CSP patterns
-
 * Accessibility linting and automated checks
-
-* Performance budgets and Lighthouse CI wiring
-
 * RSS feeds for blogs and changelogs
-
 * Deploy-time image optimization and caching strategies
-
-* Monitoring hooks for Pages/Workers deployments
-
-* @astrojs/image and image pipelines
-
-* View Transitions API patterns for Astro
-
-* i18n options for Astro sites
-
-* Adapters: Cloudflare, Vercel, Netlify
-
-* SEO helpers: sitemap, robots, structured data
-
-* Content Collections patterns and CMS bridges (Sanity, Contentful, Storyblok)
-
-* Rich code rendering: Shiki, Code Hike
-
-* Data fetching best practices with islands (e.g., TanStack Query)
-
-* Testing and QA: Vitest, Playwright setup for Astro
-
-* Security headers and CSP patterns
-
-* Accessibility linting and automated checks
-
-* Performance budgets and Lighthouse CI wiring
-
-* RSS feeds for blogs and changelogs
-
-* Deploy-time image optimization and caching strategies
-
-* Monitoring hooks for Pages/Workers deployments
 
 ---
 
 ## Backlog details (starting)
+
+### Table of contents
+
+* [@astrojs/image and image pipelines](#astrojsimage-and-image-pipelines)
+* [View Transitions API patterns for Astro](#view-transitions-api-patterns-for-astro)
+* [i18n options for Astro sites](#i18n-options-for-astro-sites)
+* [Adapters: Cloudflare, Vercel, Netlify](#adapters-cloudflare-vercel-netlify)
+* [SEO helpers: sitemap, robots, structured data](#seo-helpers-sitemap-robots-structured-data)
+* [Content Collections and CMS bridges](#content-collections-and-cms-bridges)
+* [Rich code rendering: Shiki and Code Hike](#rich-code-rendering-shiki-and-code-hike)
+* [Testing and QA: Vitest and Playwright](#testing-and-qa-vitest-and-playwright)
+* [Performance and monitoring bundle](#performance-and-monitoring-bundle)
+* [Security headers and CSP patterns](#security-headers-and-csp-patterns)
+* [Accessibility linting and automated checks](#accessibility-linting-and-automated-checks)
+* [Data fetching with TanStack Query](#data-fetching-with-tanstack-query)
+* [RSS feeds and changelog wiring](#rss-feeds-and-changelog-wiring)
+* [Deploy-time image optimization and caching](#deploy-time-image-optimization-and-caching)
 
 ### @astrojs/image and image pipelines
 
@@ -426,3 +389,154 @@ npm i -D @builder.io/partytown
 * **Cloudflare insights:** If deploying to Pages, enable Analytics and Logs; set long cache headers for static assets.
 
 ---
+
+### Security headers and CSP patterns
+
+* **What it is:** HTTP response headers that harden your site: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`.
+* **Why it matters:** Blocks common injection vectors and mixed content; reduces blast radius if a script is compromised.
+* **Docs:**
+
+  * CSP: [https://developer.mozilla.org/docs/Web/HTTP/CSP](https://developer.mozilla.org/docs/Web/HTTP/CSP)
+  * Security headers overview: [https://developer.mozilla.org/docs/Web/HTTP/Headers](https://developer.mozilla.org/docs/Web/HTTP/Headers)
+  * Astro adapters guidance: [https://docs.astro.build/en/guides/deploy/](https://docs.astro.build/en/guides/deploy/)
+* **Cloudflare Pages/Workers example (wrangler.toml):**
+
+  ```toml
+  [vars]
+  SECURITY_HEADERS = "true"
+  ```
+
+  ```js
+  // functions/_middleware.js (Workers)
+  export async function onRequest({ next }) {
+    const res = await next();
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    res.headers.set("X-Frame-Options", "DENY");
+    res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    res.headers.set("Content-Security-Policy", [
+      "default-src 'self'",
+      "img-src 'self' data: https:",
+      "script-src 'self' 'unsafe-inline' https:",
+      "style-src 'self' 'unsafe-inline' https:",
+      "connect-src 'self' https:",
+      "font-src 'self' https: data:",
+    ].join("; "));
+    return res;
+  }
+  ```
+
+  Tip: start with `report-only` for CSP during rollout and inspect violations in your logs.
+
+### Accessibility linting and automated checks
+
+* **What it is:** Static checks and runtime scans to catch a11y issues.
+* **Why it matters:** Prevents regressions and improves usability for everyone.
+* **Tools:**
+
+  * ESLint a11y: `eslint-plugin-jsx-a11y` for JSX islands; `astro-eslint-parser` for .astro files.
+  * Playwright Axe: integrate Axe-core in E2E scans.
+* **Snippets:**
+
+  ```bash
+  npm i -D eslint @astrojs/eslint-config eslint-plugin-jsx-a11y
+  ```
+
+  ```js
+  // .eslintrc.cjs
+  module.exports = { extends: ["@astrojs/eslint-config", "plugin:jsx-a11y/recommended"] };
+  ```
+
+  ```ts
+  // tests/a11y.spec.ts
+  import { test, expect } from "@playwright/test";
+  import AxeBuilder from "@axe-core/playwright";
+  test("a11y", async ({ page }) => {
+    await page.goto("http://localhost:4321");
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  });
+  ```
+
+### Data fetching with TanStack Query
+
+* **What it is:** Client-side fetching, caching, and background updates inside hydrated islands.
+* **Why it matters:** Smooth UX for dashboards and editors without hand-rolled fetch state.
+* **Docs:** [https://tanstack.com/query/latest](https://tanstack.com/query/latest)
+* **Vue island example:**
+
+  ```bash
+  npm i @tanstack/vue-query
+  ```
+
+  ```vue
+  <!-- src/components/UsersPane.vue -->
+  <script setup>
+  import { VueQueryPlugin, useQuery } from "@tanstack/vue-query";
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => fetch("/api/users").then(r => r.json()),
+    staleTime: 60_000,
+  });
+  </script>
+  <template>
+    <div v-if="isLoading">Loading...</div>
+    <div v-else-if="error">Error</div>
+    <ul><li v-for="u in data" :key="u.id">{{ u.name }}</li></ul>
+  </template>
+  ```
+
+  ```astro
+  ---
+  import UsersPane from "../components/UsersPane.vue";
+  ---
+  <UsersPane client:visible />
+  ```
+
+  Tip: co-locate server endpoints with `src/pages/api/*.ts`; cache at the edge when possible.
+
+### RSS feeds and changelog wiring
+
+* **What it is:** Generate RSS for blogs or release notes; keeps subscribers in sync.
+* **Docs:** [https://docs.astro.build/en/guides/rss/](https://docs.astro.build/en/guides/rss/)
+* **Quick start:**
+
+  ```bash
+  npm i -D @astrojs/rss
+  ```
+
+  ```ts
+  // src/pages/rss.xml.ts
+  import rss from "@astrojs/rss";
+  import { getCollection } from "astro:content";
+  export async function GET(context) {
+    const posts = await getCollection("posts", ({ data }) => !data.draft);
+    return rss({
+      title: "My Blog",
+      stylesheet: true,
+      items: posts.map(p => ({ link: `/${p.slug}/`, title: p.data.title, pubDate: p.data.date })),
+      site: context.site,
+    });
+  }
+  ```
+
+### Deploy-time image optimization and caching
+
+* **What it is:** Optimize and cache images at build or edge.
+* **Patterns:**
+
+  * Build-time via `@astrojs/image` static generation.
+  * Edge transforms on Cloudflare Images or Vercel OG/Image; set `Cache-Control` and immutable fingerprints.
+* **Headers tip:**
+
+  ```plain
+  Cache-Control: public, max-age=31536000, immutable
+  ```
+* **Cloudflare Pages _headers example:**
+
+  ```
+  /assets/*
+    Cache-Control: public, max-age=31536000, immutable
+  ```
+
